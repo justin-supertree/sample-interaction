@@ -8,6 +8,9 @@ import {
 import type { AppProps } from "next/app";
 import type { DehydratedState } from "@tanstack/react-query";
 import type { NextPageWithLayout } from "@/types/next-page";
+import { SmoothScrollProvider } from "@/context/SmoothScroll.context";
+
+require("../../scroll-style.css");
 
 type AppPropsWithLayout = AppProps & {
   Component: NextPageWithLayout;
@@ -24,7 +27,11 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
   return (
     <QueryClientProvider client={queryClient}>
       <Hydrate state={dehydratedState}>
-        {getLayout(<Component {...pageProps} />)}
+        <SmoothScrollProvider options={{ smooth: true }}>
+          <main data-scroll-container className="container">
+            {getLayout(<Component {...pageProps} />)}
+          </main>
+        </SmoothScrollProvider>
       </Hydrate>
     </QueryClientProvider>
   );
