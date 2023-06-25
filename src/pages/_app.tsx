@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   Hydrate,
   QueryClient,
@@ -17,6 +17,8 @@ type AppPropsWithLayout = AppProps & {
 };
 
 export default function App({ Component, pageProps }: AppPropsWithLayout) {
+  const containerRef = useRef(null);
+
   const { dehydratedState } = pageProps as {
     dehydratedState: DehydratedState;
   };
@@ -27,7 +29,7 @@ export default function App({ Component, pageProps }: AppPropsWithLayout) {
   return (
     <QueryClientProvider client={queryClient}>
       <Hydrate state={dehydratedState}>
-        <SmoothScrollProvider options={{ smooth: true }}>
+        <SmoothScrollProvider containerRef={containerRef}>
           <main data-scroll-container className="container">
             {getLayout(<Component {...pageProps} />)}
           </main>

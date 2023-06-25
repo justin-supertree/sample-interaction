@@ -1,40 +1,105 @@
-import React, { createContext, useEffect, useState } from "react";
+import React, { createContext, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/router";
+import useResizeObserver from "use-resize-observer";
+import { scrollRouteConfigMap } from "@/context/SmoothScroll.util";
 
 export const SmoothScrollContext = createContext({
   scroll: null,
+  isReady: false,
 });
 
-export const SmoothScrollProvider = ({ children, options }) => {
-  const [scroll, setScroll] = useState(null);
-
-  console.log("scroll >", scroll);
+export const SmoothScrollProvider = ({ children, containerRef }) => {
+  const { height } = useResizeObserver({ ref: containerRef });
+  const [isReady, setIsReady] = useState(false);
+  const LocomotiveScrollRef = useRef(null);
+  const { route } = useRouter();
 
   useEffect(() => {
-    if (!scroll) {
-      (async () => {
-        try {
-          const LocomotiveScroll = (await import("locomotive-scroll")).default;
+    (async () => {
+      try {
+        const LocomotiveScroll = (await import("locomotive-scroll")).default;
 
-          setScroll(
-            new LocomotiveScroll({
-              el:
-                document.querySelector("[data-scroll-container]") ?? undefined,
-              ...options,
-            })
-          );
-        } catch (error) {
-          throw Error(`[SmoothScrollProvider]: ${error}`);
-        }
-      })();
-    }
+        console.log();
+        LocomotiveScrollRef.current = new LocomotiveScroll({
+          el: document.querySelector("[data-scroll-container]") ?? undefined,
+          ...scrollRouteConfigMap[route],
+        });
+
+        setIsReady(true); // Re-render the context
+      } catch (error) {
+        throw Error(`[SmoothScrollProvider]: ${error}`);
+      }
+    })();
 
     return () => {
-      scroll && scroll.destroy();
+      if (LocomotiveScrollRef.current) {
+        LocomotiveScrollRef.current.destroy();
+      }
+
+      setIsReady(false);
     };
-  }, [scroll]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [route]);
+
+  useEffect(() => {
+    if (LocomotiveScrollRef.current) {
+      LocomotiveScrollRef.current.update();
+    }
+  }, [height]);
 
   return (
-    <SmoothScrollContext.Provider value={{ scroll }}>
+    <SmoothScrollContext.Provider
+      value={{ scroll: LocomotiveScrollRef.current, isReady }}
+    >
+      {children}
+    </SmoothScrollContext.Provider>
+  );
+};
+
+export const SmoothScrollProviderWithouDestroy = ({
+  children,
+  options,
+  containerRef,
+}) => {
+  const { height } = useResizeObserver({ ref: containerRef });
+  const [isReady, setIsReady] = useState(false);
+  const LocomotiveScrollRef = useRef(null);
+  const { route } = useRouter();
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const LocomotiveScroll = (await import("locomotive-scroll")).default;
+
+        LocomotiveScrollRef.current = new LocomotiveScroll({
+          el: document.querySelector("[data-scroll-container]") ?? undefined,
+          ...options,
+        });
+
+        setIsReady(true); // Re-render the context
+      } catch (error) {
+        throw Error(`[SmoothScrollProvider]: ${error}`);
+      }
+    })();
+
+    return () => {
+      if (LocomotiveScrollRef.current) {
+        LocomotiveScrollRef.current.destroy();
+      }
+
+      setIsReady(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (LocomotiveScrollRef.current) {
+      LocomotiveScrollRef.current.update();
+    }
+  }, [height, route]);
+
+  return (
+    <SmoothScrollContext.Provider
+      value={{ scroll: LocomotiveScrollRef.current, isReady }}
+    >
       {children}
     </SmoothScrollContext.Provider>
   );
@@ -42,3 +107,5 @@ export const SmoothScrollProvider = ({ children, options }) => {
 
 SmoothScrollContext.displayName = "SmoothScrollContext";
 SmoothScrollProvider.displayName = "SmoothScrollProvider";
+SmoothScrollProviderWithouDestroy.displayName =
+  "SmoothScrollProviderWithouDestroy";
